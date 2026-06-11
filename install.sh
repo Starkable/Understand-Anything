@@ -9,8 +9,8 @@
 #   ./install.sh --help
 #
 # Curl-pipe usage:
-#   curl -fsSL https://raw.githubusercontent.com/Lum1104/Understand-Anything/main/install.sh | bash
-#   curl -fsSL https://raw.githubusercontent.com/Lum1104/Understand-Anything/main/install.sh | bash -s codex
+#   curl -fsSL https://raw.githubusercontent.com/Egonex-AI/Understand-Anything/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Egonex-AI/Understand-Anything/main/install.sh | bash -s codex
 #
 # Environment:
 #   UA_REPO_URL  Override clone URL (default: official GitHub repo)
@@ -18,7 +18,7 @@
 
 set -euo pipefail
 
-REPO_URL="${UA_REPO_URL:-https://github.com/Lum1104/Understand-Anything.git}"
+REPO_URL="${UA_REPO_URL:-https://github.com/Egonex-AI/Understand-Anything.git}"
 REPO_DIR="${UA_DIR:-$HOME/.understand-anything/repo}"
 PLUGIN_LINK="$HOME/.understand-anything-plugin"
 
@@ -40,6 +40,7 @@ hermes|$HOME/.hermes/skills|folder
 cline|$HOME/.cline/skills|folder
 kimi|$HOME/.kimi/skills|folder
 trae|$HOME/.trae/skills|per-skill
+nanobot|$HOME/.nanobot/workspace/skills|per-skill
 EOF
 }
 
