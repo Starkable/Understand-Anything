@@ -104,6 +104,26 @@ export const ko = {
   domainView: {
     backToDomains: "도메인으로 돌아가기",
   },
+  federation: {
+    view: "페더레이션",
+    title: "서비스 커뮤니티",
+    community: "커뮤니티",
+    analyzed: "분석됨",
+    pending: "미분석",
+    callSites: "개 호출",
+    empty: "페더레이션 데이터가 없습니다. 워크스페이스의 프로젝트를 분석해 주세요.",
+    externalCommunity: "외부 커뮤니티",
+    serviceId: "서비스 ID",
+    domains: "도메인",
+    pendingHint: "이 커뮤니티는 아직 분석되지 않았습니다. 해당 프로젝트에서 /understand 를 실행하세요.",
+    remoteNode: "원격 노드",
+    statusLabels: {
+      resolved: "해결됨",
+      pending: "대기 중",
+      ambiguous: "모호함",
+      stale: "오래됨",
+    },
+  },
   detailLevel: {
     filesTitle: "파일만 — 아키텍처 레벨 의존성 (빠름)",
     classesTitle: "파일 + 클래스 — 상속 포함 코드 구조",
@@ -263,6 +283,7 @@ edgeLabels: {
     exemplifies: { forward: "예시", backward: "예시됨" },
     categorized_under: { forward: "카테고리화", backward: "카테고리화함" },
     authored_by: { forward: "작성자", backward: "작성" },
+    calls_community: { forward: "커뮤니티 호출", backward: "커뮤니티에서 호출됨" },
   },
   pathFinder: {
     title: "노드 간 경로 찾기 (P)",

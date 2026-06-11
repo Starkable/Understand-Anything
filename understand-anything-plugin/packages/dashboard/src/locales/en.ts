@@ -104,6 +104,26 @@ export const en = {
   domainView: {
     backToDomains: "Back to domains",
   },
+  federation: {
+    view: "Federation",
+    title: "Service Communities",
+    community: "Community",
+    analyzed: "Analyzed",
+    pending: "Not analyzed",
+    callSites: "call site(s)",
+    empty: "No federation data available. Analyze projects in this workspace to populate cross-community links.",
+    externalCommunity: "External Community",
+    serviceId: "Service ID",
+    domains: "Domains",
+    pendingHint: "This community has not been analyzed yet. Run /understand in its project to resolve this placeholder.",
+    remoteNode: "Remote node",
+    statusLabels: {
+      resolved: "Resolved",
+      pending: "Pending",
+      ambiguous: "Ambiguous",
+      stale: "Stale",
+    },
+  },
   detailLevel: {
     filesTitle: "Files only — architecture-level dependencies (fast)",
     classesTitle: "Files + Classes — code structure with inheritance",
@@ -263,6 +283,7 @@ export const en = {
     exemplifies: { forward: "exemplifies", backward: "exemplified by" },
     categorized_under: { forward: "categorized under", backward: "categorizes" },
     authored_by: { forward: "authored by", backward: "authored" },
+    calls_community: { forward: "calls community", backward: "called by community" },
   },
   pathFinder: {
     title: "Find path between nodes (P)",

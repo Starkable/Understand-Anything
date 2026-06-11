@@ -104,6 +104,26 @@ export const zh = {
   domainView: {
     backToDomains: "返回领域列表",
   },
+  federation: {
+    view: "联邦视图",
+    title: "服务社区",
+    community: "社区",
+    analyzed: "已分析",
+    pending: "未分析",
+    callSites: "处调用",
+    empty: "暂无联邦数据。请先在工作区内的项目中运行分析，以生成跨社区关联。",
+    externalCommunity: "外部社区",
+    serviceId: "服务标识",
+    domains: "域名",
+    pendingHint: "该社区尚未被分析。请在对应项目中运行 /understand 以解析此占位节点。",
+    remoteNode: "远端节点",
+    statusLabels: {
+      resolved: "已解析",
+      pending: "待解析",
+      ambiguous: "歧义",
+      stale: "过期",
+    },
+  },
   detailLevel: {
     filesTitle: "仅文件 — 架构级依赖（快速）",
     classesTitle: "文件 + 类 — 代码结构及继承关系",
@@ -263,6 +283,7 @@ export const zh = {
     exemplifies: { forward: "例证", backward: "被例证" },
     categorized_under: { forward: "归类于", backward: "归类" },
     authored_by: { forward: "作者", backward: "著作" },
+    calls_community: { forward: "调用社区", backward: "被社区调用" },
   },
   pathFinder: {
     title: "查找节点间路径 (P)",

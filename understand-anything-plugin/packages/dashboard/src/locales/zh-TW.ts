@@ -104,6 +104,26 @@ export const zhTW = {
   domainView: {
     backToDomains: "返回領域列表",
   },
+  federation: {
+    view: "聯邦視圖",
+    title: "服務社區",
+    community: "社區",
+    analyzed: "已分析",
+    pending: "未分析",
+    callSites: "處調用",
+    empty: "暫無聯邦資料。請先在工作區內的專案中執行分析，以產生跨社區關聯。",
+    externalCommunity: "外部社區",
+    serviceId: "服務標識",
+    domains: "域名",
+    pendingHint: "該社區尚未被分析。請在對應專案中執行 /understand 以解析此佔位節點。",
+    remoteNode: "遠端節點",
+    statusLabels: {
+      resolved: "已解析",
+      pending: "待解析",
+      ambiguous: "歧義",
+      stale: "過期",
+    },
+  },
   detailLevel: {
     filesTitle: "僅檔案 — 架構級依賴（快速）",
     classesTitle: "檔案 + 類別 — 程式碼結構及繼承關係",
@@ -263,6 +283,7 @@ export const zhTW = {
     exemplifies: { forward: "例證", backward: "被例證" },
     categorized_under: { forward: "归类於", backward: "归类" },
     authored_by: { forward: "作者", backward: "著作" },
+    calls_community: { forward: "調用社區", backward: "被社區調用" },
   },
   pathFinder: {
     title: "尋找節點間路徑 (P)",

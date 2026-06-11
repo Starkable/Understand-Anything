@@ -104,6 +104,26 @@ export const ja = {
   domainView: {
     backToDomains: "ドメインに戻る",
   },
+  federation: {
+    view: "フェデレーション",
+    title: "サービスコミュニティ",
+    community: "コミュニティ",
+    analyzed: "分析済み",
+    pending: "未分析",
+    callSites: "件の呼び出し",
+    empty: "フェデレーションデータがありません。ワークスペース内のプロジェクトを分析してください。",
+    externalCommunity: "外部コミュニティ",
+    serviceId: "サービスID",
+    domains: "ドメイン",
+    pendingHint: "このコミュニティはまだ分析されていません。対象プロジェクトで /understand を実行してください。",
+    remoteNode: "リモートノード",
+    statusLabels: {
+      resolved: "解決済み",
+      pending: "保留中",
+      ambiguous: "曖昧",
+      stale: "失効",
+    },
+  },
   detailLevel: {
     filesTitle: "ファイルのみ — アーキテクチャレベルの依存関係（高速）",
     classesTitle: "ファイル + クラス — 継承を含むコード構造",
@@ -263,6 +283,7 @@ export const ja = {
     exemplifies: { forward: "例示", backward: "例示される" },
     categorized_under: { forward: "カテゴリ化", backward: "カテゴリ化する" },
     authored_by: { forward: "作成者", backward: "作成" },
+    calls_community: { forward: "コミュニティを呼び出す", backward: "コミュニティから呼び出される" },
   },
   pathFinder: {
     title: "ノード間のパスを検索 (P)",

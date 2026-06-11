@@ -104,6 +104,26 @@ export const ru = {
   domainView: {
     backToDomains: "Назад к доменам",
   },
+  federation: {
+    view: "Федерация",
+    title: "Сервисные сообщества",
+    community: "Сообщество",
+    analyzed: "Проанализировано",
+    pending: "Не проанализировано",
+    callSites: "вызов(ов)",
+    empty: "Нет данных федерации. Проанализируйте проекты в рабочей области, чтобы создать межсервисные связи.",
+    externalCommunity: "Внешнее сообщество",
+    serviceId: "ID сервиса",
+    domains: "Домены",
+    pendingHint: "Это сообщество ещё не проанализировано. Запустите /understand в его проекте.",
+    remoteNode: "Удалённый узел",
+    statusLabels: {
+      resolved: "Разрешено",
+      pending: "В ожидании",
+      ambiguous: "Неоднозначно",
+      stale: "Устарело",
+    },
+  },
   detailLevel: {
     filesTitle: "Только файлы — зависимости архитектурного уровня (быстро)",
     classesTitle: "Файлы + классы — структура кода с наследованием",
@@ -263,6 +283,7 @@ export const ru = {
     exemplifies: { forward: "иллюстрирует", backward: "иллюстрируется" },
     categorized_under: { forward: "относится к", backward: "категоризирует" },
     authored_by: { forward: "автор", backward: "автор" },
+    calls_community: { forward: "вызывает сообщество", backward: "вызывается сообществом" },
   },
   pathFinder: {
     title: "Найти путь между узлами (P)",

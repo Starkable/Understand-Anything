@@ -27,6 +27,84 @@ function findGraphFile(fileName: string): string | null {
   return graphFileCandidates(fileName).find((candidate) => fs.existsSync(candidate)) ?? null;
 }
 
+// ── Workspace (multi-project federation) ─────────────────────────────────────
+// Federation mode: UNDERSTAND_WORKSPACE_ROOT, or a .understand-workspace.json
+// found by walking up from the current project. Read-only — the dev server
+// only ever serves manifests/outbound-links from sibling projects, never
+// their source files.
+
+function resolveWorkspaceRootForServer(): string | null {
+  const envRoot = process.env.UNDERSTAND_WORKSPACE_ROOT;
+  if (envRoot && fs.existsSync(envRoot)) return path.resolve(envRoot);
+  // Walk up from GRAPH_DIR (or cwd) looking for the workspace config
+  let current = path.resolve(process.env.GRAPH_DIR || process.cwd());
+  for (let depth = 0; depth < 6; depth++) {
+    if (fs.existsSync(path.join(current, ".understand-workspace.json"))) return current;
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return null;
+}
+
+function discoverWorkspaceProjects(workspaceRoot: string): string[] {
+  // Respect the optional projects[] list in .understand-workspace.json,
+  // otherwise scan immediate subdirectories with a .understand-anything/ dir.
+  try {
+    const configPath = path.join(workspaceRoot, ".understand-workspace.json");
+    if (fs.existsSync(configPath)) {
+      const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as { projects?: string[] };
+      if (Array.isArray(config.projects) && config.projects.length > 0) {
+        return config.projects
+          .map((p) => path.resolve(workspaceRoot, p))
+          // Path-traversal guard: configured projects must stay inside the workspace
+          .filter((abs) => abs.startsWith(workspaceRoot) && fs.existsSync(abs));
+      }
+    }
+    return fs
+      .readdirSync(workspaceRoot)
+      .map((name) => path.join(workspaceRoot, name))
+      .filter((abs) => {
+        try {
+          return fs.statSync(abs).isDirectory() && fs.existsSync(path.join(abs, ".understand-anything"));
+        } catch {
+          return false;
+        }
+      });
+  } catch (err) {
+    console.error("[understand-anything] workspace project discovery failed:", err);
+    return [];
+  }
+}
+
+/** Build the federation graph by aggregating sibling manifests + outbound links (runtime only). */
+async function buildFederationPayload(workspaceRoot: string): Promise<unknown> {
+  // Core's workspace module is Node-only — import it lazily so the browser
+  // bundle never sees it (same pattern as the dist aliases below).
+  const federationModule = path.resolve(__dirname, "../core/dist/workspace/federation.js");
+  const { buildFederationGraph } = (await import(/* @vite-ignore */ `file://${federationModule.replace(/\\/g, "/")}`)) as {
+    buildFederationGraph: (roots: string[]) => unknown;
+  };
+  return buildFederationGraph(discoverWorkspaceProjects(workspaceRoot));
+}
+
+/** Read-only sibling manifest lookup by serviceId (for remote display names). */
+function readSiblingManifest(workspaceRoot: string, serviceId: string): unknown | null {
+  if (!serviceId || serviceId.includes("\0")) return null;
+  for (const projectRoot of discoverWorkspaceProjects(workspaceRoot)) {
+    const manifestPath = path.join(projectRoot, ".understand-anything", "community-manifest.json");
+    // Defense in depth: manifest must stay inside the workspace root
+    if (!manifestPath.startsWith(workspaceRoot) || !fs.existsSync(manifestPath)) continue;
+    try {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8")) as { serviceId?: string };
+      if (manifest.serviceId === serviceId) return manifest;
+    } catch {
+      // Malformed manifest — skip
+    }
+  }
+  return null;
+}
+
 function projectRootFromGraphFile(candidate: string): string {
   return path.dirname(path.dirname(candidate));
 }
@@ -253,7 +331,9 @@ export default defineConfig({
             pathname === "/diff-overlay.json" ||
             pathname === "/meta.json" ||
             pathname === "/config.json" ||
-            pathname === "/file-content.json";
+            pathname === "/file-content.json" ||
+            pathname === "/federation-graph.json" ||
+            pathname === "/community-manifest.json";
 
           if (!isProtectedEndpoint) {
             next();
@@ -270,6 +350,41 @@ export default defineConfig({
           if (pathname === "/file-content.json") {
             const result = readSourceFile(url);
             sendJson(res, result.statusCode, result.payload);
+            return;
+          }
+
+          // Federation graph — workspace mode only (runtime aggregation,
+          // never persisted as a source of truth).
+          if (pathname === "/federation-graph.json") {
+            const workspaceRoot = resolveWorkspaceRootForServer();
+            if (!workspaceRoot) {
+              sendJson(res, 404, { error: "No workspace configured (set UNDERSTAND_WORKSPACE_ROOT or add .understand-workspace.json)" });
+              return;
+            }
+            buildFederationPayload(workspaceRoot)
+              .then((payload) => sendJson(res, 200, payload))
+              .catch((err) => {
+                console.error("[understand-anything] federation aggregation failed:", err);
+                sendJson(res, 500, { error: "Failed to build federation graph" });
+              });
+            return;
+          }
+
+          // Read-only sibling manifest proxy (single-community mode uses it
+          // to resolve remote display names). Never serves sibling source.
+          if (pathname === "/community-manifest.json") {
+            const workspaceRoot = resolveWorkspaceRootForServer();
+            if (!workspaceRoot) {
+              sendJson(res, 404, { error: "No workspace configured" });
+              return;
+            }
+            const serviceId = url.searchParams.get("serviceId") ?? "";
+            const manifest = readSiblingManifest(workspaceRoot, serviceId);
+            if (!manifest) {
+              sendJson(res, 404, { error: `No manifest found for serviceId "${serviceId}"` });
+              return;
+            }
+            sendJson(res, 200, manifest);
             return;
           }
 

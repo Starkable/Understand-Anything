@@ -27,6 +27,7 @@ const typeColors: Record<NodeType, string> = {
   topic: "var(--color-node-topic)",
   claim: "var(--color-node-claim)",
   source: "var(--color-node-source)",
+  community: "var(--color-accent)",
 };
 
 const typeTextColors: Record<NodeType, string> = {
@@ -51,6 +52,7 @@ const typeTextColors: Record<NodeType, string> = {
   topic: "text-node-topic",
   claim: "text-node-claim",
   source: "text-node-source",
+  community: "text-accent",
 };
 
 const complexityColors: Record<string, string> = {

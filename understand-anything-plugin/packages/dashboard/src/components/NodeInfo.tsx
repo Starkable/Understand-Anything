@@ -26,6 +26,15 @@ const typeBadgeColors: Record<NodeType, string> = {
   topic: "text-node-topic border border-node-topic/30 bg-node-topic/10",
   claim: "text-node-claim border border-node-claim/30 bg-node-claim/10",
   source: "text-node-source border border-node-source/30 bg-node-source/10",
+  community: "text-accent border border-accent/30 bg-accent/10",
+};
+
+// Status chip colors for communityMeta.status (cross-community link lifecycle)
+const communityStatusColors: Record<string, string> = {
+  resolved: "text-node-function border border-node-function/30 bg-node-function/10",
+  pending: "text-text-muted border border-border-medium bg-elevated",
+  ambiguous: "text-accent-dim border border-accent-dim/30 bg-accent-dim/10",
+  stale: "text-[#c97070] border border-[#c97070]/30 bg-[#c97070]/10",
 };
 
 const complexityBadgeColors: Record<string, string> = {
@@ -256,6 +265,51 @@ function DomainNodeDetails({ node, graph }: { node: GraphNode; graph: KnowledgeG
   return null;
 }
 
+/**
+ * Details panel for `community` nodes — the single-community "portal" view:
+ * shows the remote community's identity without expanding its full graph.
+ */
+function CommunityNodeDetails({ node }: { node: GraphNode }) {
+  const { t } = useI18n();
+  const meta = node.communityMeta;
+  if (!meta) return null;
+  const statusBadge = communityStatusColors[meta.status] ?? communityStatusColors.pending;
+  const statusLabel =
+    t.federation.statusLabels[meta.status as keyof typeof t.federation.statusLabels] ?? meta.status;
+
+  return (
+    <div className="mb-4 space-y-3 rounded-lg border border-accent/20 bg-accent/5 p-3">
+      <div className="flex items-center gap-2">
+        <h3 className="text-[11px] font-semibold text-accent uppercase tracking-wider">
+          {t.federation.externalCommunity}
+        </h3>
+        <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${statusBadge}`}>
+          {statusLabel}
+        </span>
+      </div>
+      {meta.serviceId && (
+        <div>
+          <h4 className="text-[10px] uppercase tracking-wider text-text-muted mb-1">{t.federation.serviceId}</h4>
+          <div className="text-[11px] font-mono text-text-secondary">{meta.serviceId}</div>
+        </div>
+      )}
+      {Array.isArray(meta.domains) && meta.domains.length > 0 && (
+        <div>
+          <h4 className="text-[10px] uppercase tracking-wider text-text-muted mb-1">{t.federation.domains}</h4>
+          <div className="flex flex-wrap gap-1">
+            {meta.domains.map((d) => (
+              <span key={d} className="text-[11px] px-2 py-0.5 rounded bg-elevated font-mono text-text-secondary">{d}</span>
+            ))}
+          </div>
+        </div>
+      )}
+      {meta.status === "pending" && (
+        <p className="text-[11px] text-text-muted leading-relaxed">{t.federation.pendingHint}</p>
+      )}
+    </div>
+  );
+}
+
 export default function NodeInfo() {
   const graph = useDashboardStore((s) => s.graph);
   const selectedNodeId = useDashboardStore((s) => s.selectedNodeId);
@@ -463,6 +517,9 @@ export default function NodeInfo() {
         <DomainNodeDetails node={node} graph={activeGraph} />
       )}
 
+      {/* Cross-community portal details */}
+      {node.type === "community" && <CommunityNodeDetails node={node} />}
+
       {/* Child classes/functions within this file */}
       {childNodes.length > 0 && (
         <div className="mb-4">
@@ -514,20 +571,48 @@ export default function NodeInfo() {
               const otherNode = activeGraph?.nodes.find((n) => n.id === otherId);
               const dirLabel = getDirectionalLabel(edge.type, isSource, t);
               const arrow = isSource ? "\u2192" : "\u2190";
+              // Cross-community edges carry extra metadata: link status +
+              // the remote node's display name (flow/step/endpoint in the
+              // target community), shown without expanding the remote graph.
+              const commMeta = edge.type === "calls_community" ? edge.communityMeta : undefined;
+              const commStatusLabel = commMeta
+                ? t.federation.statusLabels[commMeta.status as keyof typeof t.federation.statusLabels] ?? commMeta.status
+                : null;
 
               return (
                 <div
                   key={i}
-                  className="text-xs bg-elevated rounded-lg px-3 py-2 border border-border-subtle flex items-center gap-2 cursor-pointer hover:border-gold/40 hover:bg-gold/5 transition-colors"
+                  className="text-xs bg-elevated rounded-lg px-3 py-2 border border-border-subtle cursor-pointer hover:border-gold/40 hover:bg-gold/5 transition-colors"
                   onClick={() => {
                     navigateToNode(otherId);
                   }}
                 >
-                  <span className="text-gold font-mono">{arrow}</span>
-                  <span className="text-text-muted">{dirLabel}</span>
-                  <span className="text-text-primary truncate">
-                    {otherNode?.name ?? otherId}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gold font-mono">{arrow}</span>
+                    <span className="text-text-muted">{dirLabel}</span>
+                    <span className="text-text-primary truncate">
+                      {otherNode?.name ?? otherId}
+                    </span>
+                    {commMeta && (
+                      <span
+                        className={`ml-auto shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded ${
+                          communityStatusColors[commMeta.status] ?? communityStatusColors.pending
+                        }`}
+                      >
+                        {commStatusLabel}
+                      </span>
+                    )}
+                  </div>
+                  {commMeta?.remoteDisplayName && (
+                    <div className="mt-1 pl-5 text-[11px] text-text-muted truncate" title={commMeta.remoteDisplayName}>
+                      {t.federation.remoteNode}: {commMeta.remoteDisplayName}
+                    </div>
+                  )}
+                  {commMeta?.matchHints?.fullPath && (
+                    <div className="mt-0.5 pl-5 text-[10px] font-mono text-text-muted/70 truncate" title={commMeta.matchHints.fullPath}>
+                      {commMeta.matchHints.method ? `${commMeta.matchHints.method} ` : ""}{commMeta.matchHints.fullPath}
+                    </div>
+                  )}
                 </div>
               );
             })}

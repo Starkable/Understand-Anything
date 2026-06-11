@@ -11,6 +11,7 @@ import type {
   SectionInfo,
 } from "../types.js";
 import { LanguageRegistry } from "../languages/language-registry.js";
+import { GRAPH_SCHEMA_VERSION } from "../schema.js";
 
 interface FileMeta {
   summary: string;
@@ -319,7 +320,7 @@ export class GraphBuilder {
 
   build(): KnowledgeGraph {
     return {
-      version: "1.0.0",
+      version: GRAPH_SCHEMA_VERSION,
       project: {
         name: this.projectName,
         languages: [...this.languages].sort((a, b) => a.localeCompare(b)),

@@ -41,11 +41,13 @@ Verify every **node** has ALL required fields with correct types:
 | `tags` | string[] | At least 1 element, all lowercase and hyphenated |
 | `complexity` | string | One of: `simple`, `moderate`, `complex` |
 
-**Valid node types (16 total: 13 structural + 3 domain):**
-`file`, `function`, `class`, `module`, `concept`, `config`, `document`, `service`, `table`, `endpoint`, `pipeline`, `schema`, `resource`, `domain`, `flow`, `step`
+**Valid node types (17 total: 13 structural + 3 domain + 1 community):**
+`file`, `function`, `class`, `module`, `concept`, `config`, `document`, `service`, `table`, `endpoint`, `pipeline`, `schema`, `resource`, `domain`, `flow`, `step`, `community`
 
 **Valid node ID prefixes:**
-`file:`, `function:`, `class:`, `module:`, `concept:`, `config:`, `document:`, `service:`, `table:`, `endpoint:`, `pipeline:`, `schema:`, `resource:`, `domain:`, `flow:`, `step:`
+`file:`, `function:`, `class:`, `module:`, `concept:`, `config:`, `document:`, `service:`, `table:`, `endpoint:`, `pipeline:`, `schema:`, `resource:`, `domain:`, `flow:`, `step:`, `community:`
+
+**Terminology — three different "communities":** the `community` node type means a *cross-project service community* (a sibling project in the workspace, e.g. `community:order-service`). It is NOT the in-project business `domain` node, and NOT the Louvain "community" used internally by compute-batches for file batching. Do not flag `community` nodes as misnamed `domain` or `service` nodes.
 
 Verify every **edge** has ALL required fields with correct types:
 
@@ -57,8 +59,8 @@ Verify every **edge** has ALL required fields with correct types:
 | `direction` | string | One of: `forward`, `backward`, `bidirectional` |
 | `weight` | number | Between 0.0 and 1.0 inclusive |
 
-**Valid edge types (29 total: 26 structural + 3 domain):**
-`imports`, `exports`, `contains`, `inherits`, `implements`, `calls`, `subscribes`, `publishes`, `middleware`, `reads_from`, `writes_to`, `transforms`, `validates`, `depends_on`, `tested_by`, `configures`, `related`, `similar_to`, `deploys`, `serves`, `migrates`, `documents`, `provisions`, `routes`, `defines_schema`, `triggers`, `contains_flow`, `flow_step`, `cross_domain`
+**Valid edge types (30 total: 26 structural + 3 domain + 1 community):**
+`imports`, `exports`, `contains`, `inherits`, `implements`, `calls`, `subscribes`, `publishes`, `middleware`, `reads_from`, `writes_to`, `transforms`, `validates`, `depends_on`, `tested_by`, `configures`, `related`, `similar_to`, `deploys`, `serves`, `migrates`, `documents`, `provisions`, `routes`, `defines_schema`, `triggers`, `contains_flow`, `flow_step`, `cross_domain`, `calls_community`
 
 **Check 2 -- Referential Integrity (Critical)**
 
@@ -112,6 +114,15 @@ Only warn about missing edges for nodes that have a clear expected relationship.
 - Schema nodes (type: `schema`) should have at least one `defines_schema` edge — warn if missing
 - Domain nodes (type: `domain`) should have at least one `contains_flow` edge — warn if missing
 - Flow nodes (type: `flow`) should have at least one `flow_step` edge — warn if missing
+
+**Check 10 -- Cross-Community Edge Checks (Warning)**
+
+Only applies when the graph contains `community` nodes or `calls_community` edges:
+
+- Every `calls_community` edge target SHOULD be a `community` node (or carry a `communityMeta.remoteRef`) — warn otherwise
+- Every `community` node SHOULD have a `communityMeta` object with a valid `status` (`pending`, `resolved`, `ambiguous`, `stale`) — warn if missing
+- `resolved` edges SHOULD have a `communityMeta.remoteRef` with `serviceId`, `graphKind`, and `nodeId` — warn if any field missing (bare nodeId references are not globally unique)
+- `community` nodes are EXEMPT from the layer coverage check (Check 4) and the orphan check counts only non-community edges
 
 **Check 9 -- Node Type / ID Prefix Consistency (Warning)**
 

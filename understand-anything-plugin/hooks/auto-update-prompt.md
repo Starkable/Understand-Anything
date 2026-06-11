@@ -289,17 +289,27 @@ Perform lightweight validation (no graph-reviewer agent):
 
    The `existedAndNonEmpty && before === 0` guard catches the silent-load-failure case before it corrupts the store. If the count shrinks from N to a small number that matches the batch size, the LOAD step was skipped — abort the write rather than persist the wrong dict.
 
-4. Clean up intermediate files:
+4. **Lightweight cross-community backfill (zero LLM tokens).** After the graph is saved, re-run the deterministic federation step so the project's `community-manifest.json` / `outbound-links.json` stay in sync and sibling projects referencing changed routes get refreshed (resolved/stale):
+   ```bash
+   node $PLUGIN_ROOT/skills/understand/resolve-cross-community-links.mjs $PROJECT_ROOT
+   ```
+   - The script is fully deterministic (no subagent dispatch) — safe to run on every auto-update.
+   - In offline mode (no workspace configured) it only refreshes the local manifest.
+   - If it reports `modifiedSiblingPaths`, include them in the summary so the user knows sibling repositories have uncommitted `.understand-anything/` changes.
+   - If the script exits non-zero, log the stderr as a warning and continue — federation must not block the auto-update.
+
+5. Clean up intermediate files:
    ```bash
    rm -rf $PROJECT_ROOT/.understand-anything/intermediate
    ```
 
-5. Report a summary:
+6. Report a summary:
    - Files checked: N (total changed)
    - Structural changes found: N files
    - Cosmetic-only changes: N files (skipped)
    - Nodes updated: N
    - Action taken: PARTIAL_UPDATE / ARCHITECTURE_UPDATE
+   - Cross-community: edges by status (resolved/pending/ambiguous), backfilled sibling paths (if any)
    - Path to output: `$PROJECT_ROOT/.understand-anything/knowledge-graph.json`
 
 ---

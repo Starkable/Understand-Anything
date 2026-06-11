@@ -3,18 +3,32 @@ import { SearchEngine } from "@understand-anything/core/search";
 import type { SearchResult } from "@understand-anything/core/search";
 import type { GraphIssue } from "@understand-anything/core/schema";
 import type {
+  GraphEdge,
   GraphNode,
   KnowledgeGraph,
   TourStep,
 } from "@understand-anything/core/types";
 import type { ReactFlowInstance } from "@xyflow/react";
 
+/**
+ * Runtime-aggregated federation graph served by /federation-graph.json in
+ * workspace mode. Deliberately NOT a KnowledgeGraph — it has no layers or
+ * project metadata, just community nodes and aggregated cross-community edges.
+ */
+export interface FederationGraphData {
+  version: string;
+  kind: "federation";
+  generatedAt: string;
+  nodes: GraphNode[];
+  edges: Array<GraphEdge & { callCount?: number }>;
+}
+
 export type Persona = "non-technical" | "junior" | "experienced";
 export type NavigationLevel = "overview" | "layer-detail";
-export type NodeType = "file" | "function" | "class" | "module" | "concept" | "config" | "document" | "service" | "table" | "endpoint" | "pipeline" | "schema" | "resource" | "domain" | "flow" | "step" | "article" | "entity" | "topic" | "claim" | "source";
+export type NodeType = "file" | "function" | "class" | "module" | "concept" | "config" | "document" | "service" | "table" | "endpoint" | "pipeline" | "schema" | "resource" | "domain" | "flow" | "step" | "article" | "entity" | "topic" | "claim" | "source" | "community";
 export type Complexity = "simple" | "moderate" | "complex";
-export type EdgeCategory = "structural" | "behavioral" | "data-flow" | "dependencies" | "semantic" | "infrastructure" | "domain" | "knowledge";
-export type ViewMode = "structural" | "domain" | "knowledge";
+export type EdgeCategory = "structural" | "behavioral" | "data-flow" | "dependencies" | "semantic" | "infrastructure" | "domain" | "knowledge" | "community";
+export type ViewMode = "structural" | "domain" | "knowledge" | "federation";
 export type DetailLevel = "file" | "class";
 
 export interface FilterState {
@@ -24,9 +38,9 @@ export interface FilterState {
   edgeCategories: Set<EdgeCategory>;
 }
 
-export const ALL_NODE_TYPES: NodeType[] = ["file", "function", "class", "module", "concept", "config", "document", "service", "table", "endpoint", "pipeline", "schema", "resource", "domain", "flow", "step", "article", "entity", "topic", "claim", "source"];
+export const ALL_NODE_TYPES: NodeType[] = ["file", "function", "class", "module", "concept", "config", "document", "service", "table", "endpoint", "pipeline", "schema", "resource", "domain", "flow", "step", "article", "entity", "topic", "claim", "source", "community"];
 export const ALL_COMPLEXITIES: Complexity[] = ["simple", "moderate", "complex"];
-export const ALL_EDGE_CATEGORIES: EdgeCategory[] = ["structural", "behavioral", "data-flow", "dependencies", "semantic", "infrastructure", "domain", "knowledge"];
+export const ALL_EDGE_CATEGORIES: EdgeCategory[] = ["structural", "behavioral", "data-flow", "dependencies", "semantic", "infrastructure", "domain", "knowledge", "community"];
 
 export const EDGE_CATEGORY_MAP: Record<EdgeCategory, string[]> = {
   structural: ["imports", "exports", "contains", "inherits", "implements"],
@@ -37,6 +51,7 @@ export const EDGE_CATEGORY_MAP: Record<EdgeCategory, string[]> = {
   infrastructure: ["deploys", "serves", "provisions", "triggers", "migrates", "documents", "routes", "defines_schema"],
   domain: ["contains_flow", "flow_step", "cross_domain"],
   knowledge: ["cites", "contradicts", "builds_on", "exemplifies", "categorized_under", "authored_by"],
+  community: ["calls_community"],
 };
 
 export const DOMAIN_EDGE_TYPES = EDGE_CATEGORY_MAP.domain;
@@ -193,8 +208,11 @@ interface DashboardStore {
   isKnowledgeGraph: boolean;
   domainGraph: KnowledgeGraph | null;
   activeDomainId: string | null;
+  /** Federation graph (community nodes + aggregated cross-community edges), workspace mode only */
+  federationGraph: FederationGraphData | null;
 
   setDomainGraph: (graph: KnowledgeGraph) => void;
+  setFederationGraph: (graph: FederationGraphData) => void;
   setViewMode: (mode: ViewMode) => void;
   setIsKnowledgeGraph: (value: boolean) => void;
   navigateToDomain: (domainId: string) => void;
@@ -673,9 +691,14 @@ export const useDashboardStore = create<DashboardStore>()((set, get) => ({
   isKnowledgeGraph: false,
   domainGraph: null,
   activeDomainId: null,
+  federationGraph: null,
 
   setDomainGraph: (graph) => {
     set({ domainGraph: graph });
+  },
+
+  setFederationGraph: (graph) => {
+    set({ federationGraph: graph });
   },
 
   setIsKnowledgeGraph: (value) => {

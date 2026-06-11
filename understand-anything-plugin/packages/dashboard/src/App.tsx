@@ -5,6 +5,7 @@ import { useDashboardStore } from "./store";
 import GraphView from "./components/GraphView";
 import DomainGraphView from "./components/DomainGraphView";
 import KnowledgeGraphView from "./components/KnowledgeGraphView";
+import FederationGraphView from "./components/FederationGraphView";
 import SearchBar from "./components/SearchBar";
 import NodeInfo from "./components/NodeInfo";
 import LayerLegend from "./components/LayerLegend";
@@ -108,6 +109,7 @@ function App() {
 function Dashboard({ accessToken }: { accessToken: string }) {
   const setGraph = useDashboardStore((s) => s.setGraph);
   const setDomainGraph = useDashboardStore((s) => s.setDomainGraph);
+  const setFederationGraph = useDashboardStore((s) => s.setFederationGraph);
   const setDiffOverlay = useDashboardStore((s) => s.setDiffOverlay);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [graphIssues, setGraphIssues] = useState<GraphIssue[]>([]);
@@ -204,6 +206,28 @@ function Dashboard({ accessToken }: { accessToken: string }) {
       .catch(() => {});
   }, [setDomainGraph]);
 
+  // Federation graph: only available in workspace mode — the endpoint
+  // returns 404 in single-project mode, which we silently ignore.
+  useEffect(() => {
+    fetch(dataUrl("federation-graph.json", accessToken))
+      .then((res) => {
+        if (!res.ok) return null;
+        return res.json();
+      })
+      .then((data: unknown) => {
+        if (
+          data &&
+          typeof data === "object" &&
+          (data as Record<string, unknown>).kind === "federation" &&
+          Array.isArray((data as Record<string, unknown>).nodes) &&
+          Array.isArray((data as Record<string, unknown>).edges)
+        ) {
+          setFederationGraph(data as Parameters<typeof setFederationGraph>[0]);
+        }
+      })
+      .catch(() => {});
+  }, [setFederationGraph]);
+
   return (
     <I18nProvider language={outputLanguage ?? "en"}>
       <ThemeProvider metaTheme={metaTheme}>
@@ -255,6 +279,7 @@ function DashboardContent({
   const setViewMode = useDashboardStore((s) => s.setViewMode);
   const isKnowledgeGraph = useDashboardStore((s) => s.isKnowledgeGraph);
   const domainGraph = useDashboardStore((s) => s.domainGraph);
+  const federationGraph = useDashboardStore((s) => s.federationGraph);
   const layoutIssues = useDashboardStore((s) => s.layoutIssues);
   const isMobile = useIsMobile();
   const { t } = useI18n();
@@ -480,6 +505,32 @@ function DashboardContent({
               </div>
             </>
           )}
+          {/* Federation toggle — only rendered in workspace mode (federation graph loaded) */}
+          {federationGraph && federationGraph.nodes.length > 0 && (
+            <>
+              <div className="w-px h-5 bg-border-subtle" />
+              <button
+                type="button"
+                onClick={() =>
+                  setViewMode(
+                    viewMode === "federation"
+                      ? isKnowledgeGraph
+                        ? "knowledge"
+                        : "structural"
+                      : "federation",
+                  )
+                }
+                title={t.federation.view}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                  viewMode === "federation"
+                    ? "bg-accent/20 text-accent"
+                    : "bg-elevated text-text-muted hover:text-text-secondary"
+                }`}
+              >
+                {t.federation.view}
+              </button>
+            </>
+          )}
         </div>
 
         {/* Middle — scrollable legends */}
@@ -487,7 +538,7 @@ function DashboardContent({
           <div className="flex items-center gap-4 w-max">
             <DiffToggle />
             {/* Detail level: file view (architecture) / class view (code structure) */}
-            {!isKnowledgeGraph && viewMode !== "domain" && (
+            {!isKnowledgeGraph && viewMode !== "domain" && viewMode !== "federation" && (
               <>
                 <div className="w-px h-5 bg-border-subtle" />
                 <div className="flex items-center bg-elevated rounded-lg p-0.5">
@@ -635,7 +686,9 @@ function DashboardContent({
       <div className="flex-1 flex min-h-0 relative">
         {/* Graph area */}
         <div className="flex-1 min-w-0 min-h-0 relative">
-          {viewMode === "knowledge" ? (
+          {viewMode === "federation" ? (
+            <FederationGraphView />
+          ) : viewMode === "knowledge" ? (
             <KnowledgeGraphView />
           ) : viewMode === "domain" && domainGraph ? (
             <DomainGraphView />

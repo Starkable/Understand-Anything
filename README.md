@@ -66,6 +66,10 @@ Switch to the domain view and see how your code maps to real business processes 
 
 Point `/understand-knowledge` at a [Karpathy-pattern LLM wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) and get a force-directed knowledge graph with community clustering. The deterministic parser extracts wikilinks and categories from `index.md`, then LLM agents discover implicit relationships, extract entities, and surface claims — turning your wiki into a navigable graph of interconnected ideas.
 
+### Link multiple projects as a federation
+
+Analyze each project in a workspace independently and Understand-Anything connects them automatically: cross-service HTTP calls become links between "service communities", unanalyzed targets get placeholder nodes that are backfilled later, and the dashboard gains a federation view showing how your services call each other. See [docs/multi-project-community-federation.md](docs/multi-project-community-federation.md) for setup and conventions.
+
 <table>
   <tr>
     <td width="50%" valign="top">

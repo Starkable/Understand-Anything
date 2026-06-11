@@ -177,6 +177,25 @@ Determine whether to run a full analysis or incremental update.
    ```
    If this returns no files, report "Graph is up to date" and STOP.
 
+7.5. **Community identity & workspace discovery (multi-project federation):**
+   - **Community identity.** If the project README starts with an `understand-community` YAML frontmatter block, note the declared `serviceId`, `displayName`, `domains`, `aliases`, and `contextPaths` — these define this project's *service community* identity for cross-project linking. Do NOT parse it manually here; the bundled `resolve-cross-community-links.mjs` script (Phase 7 step 1.5) handles parsing, fallbacks (`package.json` name → directory name), and writes `.understand-anything/community-identity.json` when the README lacks the block. If the frontmatter is missing, mention in the final report that adding it improves cross-project linking:
+     ```yaml
+     ---
+     understand-community:
+       serviceId: order-service
+       displayName: 订单服务
+       domains:
+         - order.internal.com
+       contextPaths:
+         - /order-api
+     ---
+     ```
+   - **Workspace discovery.** Determine the workspace mode (used by the Phase 7 cross-community step):
+     1. If `UNDERSTAND_WORKSPACE_ROOT` is set, that directory is the workspace root.
+     2. Otherwise, if a `.understand-workspace.json` exists in a parent directory of `$PROJECT_ROOT`, that parent is the workspace root.
+     3. Otherwise the analysis runs in **offline mode**: single-project only, cross-community resolution is skipped, but `community-manifest.json` is still produced so sibling projects can link to this one later.
+   - **Concurrency caveat:** running `/understand` on two projects of the same workspace **in parallel is not supported** — the backfill step writes into sibling projects' `.understand-anything/` directories.
+
 8. **Collect project context for subagent injection:**
    - Read `README.md` (or `README.rst`, `readme.md`) from `$PROJECT_ROOT` if it exists. Store as `$README_CONTENT` (first 3000 characters).
    - Read the primary package manifest (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `pom.xml`) if it exists. Store as `$MANIFEST_CONTENT`.
@@ -737,6 +756,25 @@ Report to the user: `[Phase 7/7] Saving knowledge graph...`
 
 1. Write the final knowledge graph to `$PROJECT_ROOT/.understand-anything/knowledge-graph.json`.
 
+1.5. **Resolve cross-community links (multi-project federation).** Run the bundled script (deterministic — zero LLM cost):
+   ```bash
+   node <SKILL_DIR>/resolve-cross-community-links.mjs $PROJECT_ROOT
+   ```
+   The script:
+   - Resolves community identity (README `understand-community` frontmatter → `package.json` name → directory name; writes `community-identity.json` sidecar when inferred)
+   - Auto-discovers `contextPath`s (Spring Boot / Express / Gin / FastAPI / NestJS) and merges with README-declared ones
+   - **Forward:** discovers outbound HTTP calls in source, matches them against sibling-project manifests (`domain + method + fullPath`), writes `community` nodes and `calls_community` edges into `knowledge-graph.json`, persists `outbound-links.json`
+   - Writes `community-manifest.json` (this project's identity + routeCatalog) — always produced, even in offline mode
+   - **Reverse:** backfills sibling projects whose outbound links point at this project (pending → resolved; vanished routes → stale)
+
+   Parse the JSON report from stdout and include in the final summary:
+   - serviceId and identity source (suggest adding README frontmatter when `identitySource` is not `readme`)
+   - Cross-community edge counts by status (`resolved` / `pending` / `ambiguous`)
+   - Every `ambiguousDetails` entry — these need user confirmation and are NEVER auto-linked
+   - `modifiedSiblingPaths` — sibling projects whose `.understand-anything/` files were updated by backfill. These changes are **not committed automatically**; the user should review and commit them in those repositories.
+
+   If the script exits non-zero, report the stderr as a warning and continue — cross-community linking is supplementary and must not block saving the graph.
+
 2. **Generate structural fingerprints baseline.** This creates the basis for future automatic incremental updates and **must succeed before `meta.json` is written** — otherwise auto-update sees a fresh commit hash with no fingerprints to compare against, classifies every file as STRUCTURAL, and escalates to `FULL_UPDATE` on every subsequent commit (issue #152).
 
    Write the input file:
@@ -811,7 +849,7 @@ Report to the user: `[Phase 7/7] Saving knowledge graph...`
 
 ## Reference: KnowledgeGraph Schema
 
-### Node Types (13 total)
+### Node Types (14 total)
 | Type | Description | ID Convention |
 |---|---|---|
 | `file` | Source code file | `file:<relative-path>` |
@@ -827,8 +865,9 @@ Report to the user: `[Phase 7/7] Saving knowledge graph...`
 | `pipeline` | CI/CD pipeline configuration | `pipeline:<relative-path>` |
 | `schema` | Schema definition (GraphQL, Protobuf, Prisma) | `schema:<relative-path>` |
 | `resource` | Infrastructure resource (Terraform, CloudFormation) | `resource:<relative-path>` |
+| `community` | Cross-project service community portal (written ONLY by `resolve-cross-community-links.mjs` — file-analyzers must NOT emit it) | `community:<serviceId>` |
 
-### Edge Types (26 total)
+### Edge Types (27 total)
 | Category | Types |
 |---|---|
 | Structural | `imports`, `exports`, `contains`, `inherits`, `implements` |
@@ -838,6 +877,20 @@ Report to the user: `[Phase 7/7] Saving knowledge graph...`
 | Semantic | `related`, `similar_to` |
 | Infrastructure | `deploys`, `serves`, `provisions`, `triggers` |
 | Schema/Data | `migrates`, `documents`, `routes`, `defines_schema` |
+| Community | `calls_community` (cross-project — written ONLY by `resolve-cross-community-links.mjs`) |
+
+### Multi-Project Community Federation Files
+
+| File | Location | Purpose |
+|---|---|---|
+| `.understand-workspace.json` | workspace root | Declares the workspace and (optionally) its project list |
+| `community-manifest.json` | each project's `.understand-anything/` | Service identity + routeCatalog; read by sibling projects |
+| `outbound-links.json` | each project's `.understand-anything/` | Outbound cross-community references; read during backfill |
+| `community-identity.json` | each project's `.understand-anything/` | Sidecar written when identity was inferred (README lacks frontmatter) |
+
+`communityMeta.status` lifecycle: `pending` (target not analyzed) → `resolved` (matched to a concrete remote endpoint) / `ambiguous` (multiple candidates — never auto-picked) / `stale` (target routes changed; re-analysis of the target refreshes it).
+
+**Terminology:** the `community` node = a *cross-project service community*. It is distinct from the in-project business `domain` node (domain-graph) and from the Louvain "community" used internally by `compute-batches.mjs` for file batching.
 
 ### Edge Weight Conventions
 | Edge Type | Weight |

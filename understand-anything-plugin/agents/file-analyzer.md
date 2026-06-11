@@ -306,6 +306,15 @@ The `batchImportData` values contain only resolved project-internal paths — ex
 
 Do NOT use edge types not listed in the tables above.
 
+**Outbound cross-service HTTP signals (annotation only — do NOT create community nodes/edges):**
+
+When a file makes HTTP calls to OTHER services (`fetch`/`axios` with absolute URLs, Spring `RestTemplate`/`WebClient`, `@FeignClient` interfaces, Go `http.Get`, Python `requests`/`httpx`, configured baseUrl + relative path), surface those signals so the deterministic cross-community linker (`resolve-cross-community-links.mjs`) and human readers can find them:
+
+- Mention the outbound dependency in the node `summary` (e.g. "查询退费，调用订单服务 `GET order.internal.com/order-api/orders/{id}` 获取订单信息") — include domain and path when statically visible.
+- Add an `external-call` tag to nodes that perform outbound cross-service HTTP calls.
+- For `@FeignClient` / typed API client interfaces: record the target service name (`name`/`value` attribute) and the base url/config key in the summary — these are exactly the hints the linker cannot extract on its own.
+- Do NOT emit `community` nodes or `calls_community` edges yourself — those are written exclusively by the deterministic resolve step after assembly. Do NOT guess which sibling project owns a URL.
+
 ## Node Types and ID Conventions
 
 You MUST use these exact prefixes for node IDs:

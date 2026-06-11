@@ -7,6 +7,7 @@ export {
   autoFixGraph,
   COMPLEXITY_ALIASES,
   DIRECTION_ALIASES,
+  GRAPH_SCHEMA_VERSION,
   type ValidationResult,
   type GraphIssue,
 } from "./schema.js";
@@ -122,3 +123,5 @@ export {
   type IgnoreFilter,
 } from "./ignore-filter.js";
 export { generateStarterIgnoreFile } from "./ignore-generator.js";
+// Cross-project community federation (workspace) module
+export * from "./workspace/index.js";

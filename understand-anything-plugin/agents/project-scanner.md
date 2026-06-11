@@ -42,7 +42,8 @@ From these, synthesize:
 
 - **`name`** -- in priority order: `package.json` `name`, `Cargo.toml` `[package].name`, `go.mod` module path's last segment, `pyproject.toml` `[project].name` or `[tool.poetry].name`, else the directory name of the project root.
 - **`rawDescription`** -- the `description` field from `package.json` (or its equivalent in the matching manifest), or `""` if none.
-- **`readmeHead`** -- the first ~10 lines of `README.md` (or equivalent), or `""` if no README exists.
+- **`readmeHead`** -- the first ~10 lines of `README.md` (or equivalent), or `""` if no README exists. If the README starts with YAML frontmatter (`---` fenced block), capture the lines AFTER the frontmatter for narrative grounding.
+- **`communityIdentity`** -- if the README begins with an `understand-community` YAML frontmatter block (cross-project service community declaration), copy its fields verbatim into an object: `{serviceId, displayName, domains, aliases, contextPaths}` (omit absent fields). If no such frontmatter exists, set `null`. Do NOT invent values — this field is declarative user input only.
 - **`frameworks`** -- match dependency names against known frameworks: `react`, `vue`, `svelte`, `@angular/core`, `express`, `fastify`, `koa`, `next`, `nuxt`, `vite`, `vitest`, `jest`, `mocha`, `tailwindcss`, `prisma`, `typeorm`, `sequelize`, `mongoose`, `redux`, `zustand`, `mobx`; Python: `django`, `djangorestframework`, `fastapi`, `flask`, `sqlalchemy`, `alembic`, `celery`, `pydantic`, `uvicorn`, `gunicorn`, `aiohttp`, `tornado`, `starlette`, `pytest`, `hypothesis`, `channels`; Ruby: `rails`, `railties`, `sinatra`, `grape`, `rspec`, `sidekiq`, `activerecord`, `actionpack`, `devise`, `pundit`; Go: `github.com/gin-gonic/gin`, `github.com/labstack/echo`, `github.com/gofiber/fiber`, `github.com/go-chi/chi`, `gorm.io/gorm`; Rust: `actix-web`, `axum`, `rocket`, `diesel`, `tokio`, `serde`, `warp`; JVM: `spring-boot`, `spring-web`, `spring-data`, `quarkus`, `micronaut`, `hibernate`, `jakarta`, `junit`, `ktor`. Also infer infrastructure tools from manifest presence: add `Docker` if `Dockerfile` exists in the file list, `Docker Compose` if `docker-compose.yml`/`docker-compose.yaml` exists, `Terraform` if any `*.tf`, `GitHub Actions` if `.github/workflows/*.yml`, `GitLab CI` if `.gitlab-ci.yml`, `Jenkins` if `Jenkinsfile`.
 - **`languages`** -- the deduplicated, alphabetically-sorted top-level language set you observe across the manifests + the bundled script's per-file language tally (you will read this from Step B's output).
 
@@ -197,6 +198,12 @@ Then assemble the final output JSON:
   "estimatedComplexity": "moderate",
   "importMap": {
     "src/index.ts": ["src/utils.ts"]
+  },
+  "communityIdentity": {
+    "serviceId": "order-service",
+    "displayName": "订单服务",
+    "domains": ["order.internal.com"],
+    "contextPaths": ["/order-api"]
   }
 }
 ```
@@ -211,6 +218,7 @@ Then assemble the final output JSON:
 - `filteredByIgnore` (integer): directly from Step B
 - `estimatedComplexity` (string): directly from Step B
 - `importMap` (object): directly from Step C's `importMap` field
+- `communityIdentity` (object | null): from your Step A narrative work — the README `understand-community` frontmatter copied verbatim, or `null` when absent
 
 ## Critical Constraints
 

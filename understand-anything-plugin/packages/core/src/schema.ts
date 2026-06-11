@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-// Edge types (35 values across 8 categories)
+/**
+ * Current graph schema version. Bumped to 1.1.0 with the cross-project
+ * community federation extension (community nodes + calls_community edges).
+ * Graphs without these fields (1.0.0) remain fully valid.
+ */
+export const GRAPH_SCHEMA_VERSION = "1.1.0";
+
+// Edge types (36 values across 9 categories)
 export const EdgeTypeSchema = z.enum([
   "imports", "exports", "contains", "inherits", "implements",  // Structural
   "calls", "subscribes", "publishes", "middleware",             // Behavioral
@@ -11,6 +18,7 @@ export const EdgeTypeSchema = z.enum([
   "migrates", "documents", "routes", "defines_schema",         // Schema/Data
   "contains_flow", "flow_step", "cross_domain",                // Domain
   "cites", "contradicts", "builds_on", "exemplifies", "categorized_under", "authored_by", // Knowledge
+  "calls_community",                                            // Community (cross-project)
 ]);
 
 // Aliases that LLMs commonly generate instead of canonical node types
@@ -72,6 +80,10 @@ export const NODE_TYPE_ALIASES: Record<string, string> = {
   reference: "source",
   raw: "source",
   paper: "source",
+  // Community aliases (cross-project service community)
+  external_service: "community",
+  remote_service: "community",
+  external_community: "community",
 };
 
 // Aliases that LLMs commonly generate instead of canonical edge types
@@ -119,6 +131,11 @@ export const EDGE_TYPE_ALIASES: Record<string, string> = {
   tagged_with: "categorized_under",
   written_by: "authored_by",
   created_by: "authored_by",
+  // Community aliases
+  calls_service: "calls_community",
+  calls_external: "calls_community",
+  community_call: "calls_community",
+  cross_community: "calls_community",
   // Note: "implemented_by" is intentionally NOT aliased to "implements" —
   // it inverts edge direction (see commit fd0df15). The LLM should use
   // "implements" with correct source/target instead.
@@ -365,6 +382,33 @@ const KnowledgeMetaSchema = z.object({
   content: z.string().optional(),
 }).passthrough();
 
+// Globally-qualified reference into another project's graph
+const RemoteNodeRefSchema = z.object({
+  serviceId: z.string(),
+  graphKind: z.enum(["structural", "domain"]),
+  nodeId: z.string(),
+});
+
+// Match signals kept for later backfill resolution
+const MatchHintsSchema = z.object({
+  domain: z.string().optional(),
+  method: z.string().optional(),
+  fullPath: z.string().optional(),
+  contextPathHint: z.string().optional(),
+}).passthrough();
+
+// Metadata for community nodes and calls_community edges
+const CommunityMetaSchema = z.object({
+  status: z.enum(["pending", "resolved", "ambiguous", "stale"]),
+  serviceId: z.string().optional(),
+  domains: z.array(z.string()).optional(),
+  projectRef: z.string().optional(),
+  remoteRef: RemoteNodeRefSchema.optional(),
+  remoteDisplayName: z.string().optional(),
+  matchHints: MatchHintsSchema.optional(),
+  confidence: z.number().min(0).max(1).optional(),
+}).passthrough();
+
 export const GraphNodeSchema = z.object({
   id: z.string(),
   type: z.enum([
@@ -373,6 +417,7 @@ export const GraphNodeSchema = z.object({
     "pipeline", "schema", "resource",
     "domain", "flow", "step",
     "article", "entity", "topic", "claim", "source",
+    "community",
   ]),
   name: z.string(),
   filePath: z.string().optional(),
@@ -383,6 +428,7 @@ export const GraphNodeSchema = z.object({
   languageNotes: z.string().optional(),
   domainMeta: DomainMetaSchema.optional(),
   knowledgeMeta: KnowledgeMetaSchema.optional(),
+  communityMeta: CommunityMetaSchema.optional(),
 }).passthrough();
 
 export const GraphEdgeSchema = z.object({
@@ -392,6 +438,7 @@ export const GraphEdgeSchema = z.object({
   direction: z.enum(["forward", "backward", "bidirectional"]),
   description: z.string().optional(),
   weight: z.number().min(0).max(1),
+  communityMeta: CommunityMetaSchema.optional(),
 });
 
 export const LayerSchema = z.object({
