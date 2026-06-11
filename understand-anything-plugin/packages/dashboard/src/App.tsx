@@ -59,6 +59,8 @@ function dataUrl(fileName: string, token: string | null): string {
     };
     const url = envMap[fileName];
     if (url) return url;
+    const base = import.meta.env.BASE_URL || "/";
+    return `${base.endsWith("/") ? base : `${base}/`}${fileName}`;
   }
   const path = `/${fileName}`;
   return token ? `${path}?token=${encodeURIComponent(token)}` : path;
